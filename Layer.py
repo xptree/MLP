@@ -6,39 +6,99 @@
 # TODO: implemetn HiddenLayer
 
 import numpy as np
-from ActivationFunction import sigmoid
 
-class HiddenLayer(object):
-    def __init__(self, rng, n_in, n_out, W=None, b=None,
-            nxt=None, Lambda = 0., alpha = 0.001):
-        if W is None:
-            W = np.asarray(
-                rng.uniform(
-                    low = -np.sqrt(6. / (n_in + n_out)),
-                    high = np.sqrt(6. / (n_in + n_out)),
-                    size = (n_out, n_in)
-                ),
-                dtype = np.float
-            )
-        if b is None:
-            b = np.zeros(n_out, dtype=np.float).reshape(n_out, 1)
+class InputLayer(object):
+    def __init__(self, rng, n_in, n_out, activation, activationPrime,
+        nxt, Lambda = 0., alpha = .001):
+        W = np.asarray(
+            rng.uniform(
+                low = -np.sqrt(6. / (n_in + n_out)),
+                high = np.sqrt(6. / (n_in + n_out)),
+                size = (n_out, n_in)
+            ),
+            dtype = np.float
+        )
+        b = np.zeros(n_out, dtype=np.float).reshape(n_out, 1)
         self.W, self.b = W * 4, b
         self.n_in, self.n_out = n_in, n_out
+        self.activation, self.activationPrime = activation, activationPrime
         self.nxt = nxt
         self.Lambda = Lambda #weight decay
         self.alpha = alpha #learning rate
-    def process(self, a_in, m):
+    def process(self, x, bp = True):
+        '''
+            x : (n_in * m)
+            W : (n_out * n_in)
+        '''
+        m = x.shape[1]
+        z = np.dot(self.W, x) + np.tile(self.b, (1, m))
+        a_out = self.activation(z)
+        self.cost = self.Lambda / 2 * ( (self.W ** 2).sum() )
+        self.nxt.process(a_out, bp)
+        if bp == True:
+            delta = self.nxt.getdelta()
+            gradW = np.dot(delta, x.T) / m + self.Lambda * self.W
+            gradb = np.dot(delta, np.ones((m, 1))) / m
+            self.W -= self.alpha * gradW
+            self.b -= self.alpha * gradb
+        #return np.dot( np.dot(a_in, 1 - a_in), np.dot(self.W.T, delta) )
+
+class OutputLayer(object):
+    def __init__(self, n_in, activation, activationPrime, costType):
+        self.n_in = n_in
+        self.activation, self.activationPrime, self.costType = activation, activationPrime, costType
+
+    def setstd(self, std):
+        self.std = std
+
+    def getdelta(self):
+        return self.delta
+
+    def getresule(self):
+        return self.result
+
+    def process(self, a_in, bp = True):
+        self.result = a_in
+        if bp:
+            m = a_in.shape[1]
+            self.delta = (a_in - self.std) * self.activationPrime(a_in) if bp else None
+            error = a_in - self.std
+            self.cost = .5 * (( error ** 2 ).sum()) / m
+        #return ( a_in - self.std ) * ( a_in * (1 - a_in) )
+        #a_in*(1-a_in) (n_in * m)
+        #a_in - self.std n_in * m
+class HiddenLayer(object):
+    def __init__(self, rng, n_in, n_out, activation, activationPrime,
+            nxt, Lambda = 0., alpha = .001):
+        W = np.asarray(
+            rng.uniform(
+                low = -np.sqrt(6. / (n_in + n_out)),
+                high = np.sqrt(6. / (n_in + n_out)),
+                size = (n_out, n_in)
+            ),
+            dtype = np.float
+        )
+        b = np.zeros(n_out, dtype=np.float).reshape(n_out, 1)
+        self.W, self.b = W * 4, b
+        self.n_in, self.n_out = n_in, n_out
+        self.activation, self.activationPrime = activation, activationPrime
+        self.nxt = nxt
+        self.Lambda = Lambda #weight decay
+        self.alpha = alpha #learning rate
+
+    def process(self, a_in, bp = True):
+        m = a_in.shape[1]
         z = np.dot(self.W, a_in) + np.tile(self.b, (1, m))
-        a_out = self.activation.f(z)
-        delta = self.nxt.process(a_out, m)
-        gradW = np.dot(delta, a_in.T) + self.Lambda * self.W
-        gradb = np.dot(delta, np.ones((m, 1)))
-        self.W -= self.alpha * gradW
-        self.b -= self.alpha * gradb
-        return np.dot( np.dot(a_in, 1 - a_in), np.dot(self.W.T, delta) )
-
-
-
+        a_out = self.activation(z)
+        self.cost = self.Lambda / 2 * ( (self.W * self.W).sum() )
+        self.nxt.process(a_out , m)
+        if bp:
+            delta = self.nxt.getdelta()
+            gradW = np.dot(delta, a_in.T) / m + self.Lambda * self.W
+            gradb = np.dot(delta, np.ones((m, 1))) / m
+            self.W -= self.alpha * gradW
+            self.b -= self.alpha * gradb
+            self.delta = np.dot(self.W.T, delta) * self.activationPrime(a_in)
 
 if __name__ == "__main__":
     pass
