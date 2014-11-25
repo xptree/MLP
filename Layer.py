@@ -39,7 +39,8 @@ class InputLayer(object):
         if bp == True:
             delta = self.nxt.getdelta()
             gradW = np.dot(delta, x.T) / m + self.Lambda * self.W
-            gradb = np.dot(delta, np.ones((m, 1))) / m
+            #gradb = np.dot(delta, np.ones((m, 1))) / m
+            gradb = np.sum(delta, axis=1).reshape(self.n_out, 1) / m
             self.W -= self.alpha * gradW
             self.b -= self.alpha * gradb
         #return np.dot( np.dot(a_in, 1 - a_in), np.dot(self.W.T, delta) )
@@ -96,7 +97,8 @@ class HiddenLayer(object):
         m = a_in.shape[1]
         delta = self.nxt.getdelta()
         gradW = np.dot(delta, a_in.T) / m + self.Lambda * self.W
-        gradb = np.dot(delta, np.ones((m, 1))) / m
+        #gradb = np.dot(delta, np.ones((m, 1))) / m
+        gradb = np.sum(delta, axis=1).reshape(self.n_out, 1) / m
         self.W -= self.alpha * gradW
         self.b -= self.alpha * gradb
         self.delta = np.dot(self.W.T, delta) * self.activationPrime(a_in)

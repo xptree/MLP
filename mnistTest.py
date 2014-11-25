@@ -18,9 +18,14 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(filename)s[line:%
 def translate(dataset):
     X = dataset[0].T.astype(util.FLOAT, copy=False)
     y = []
+    count = [0] * 10
     for inst in dataset[1]:
         y.append(np.eye(10)[inst])
+        if count[inst] == 0:
+            print inst, y[-1]
+        count[inst] += 1
     y = np.array(y, dtype = util.FLOAT).T
+    #print count
     return X, y
 
 class mnistTestCase(unittest.TestCase):
@@ -32,7 +37,7 @@ class mnistTestCase(unittest.TestCase):
         X_train, y_train = translate(train_set)
         X_test, y_test = translate(test_set)
         mlp = MLP([784, 800, 300, 10], 0, 0.2, "sigmoid", "mse", load="True")
-        mlp.fit(X_train, y_train, 400, 500000)
+        mlp.fit(X_train, y_train, 100, 500000)
         mlp_result, mlp_prediction = mlp.predict(X_test, y_test)
         mlp_result, mlp_prediction = mlp.predict(X_train, y_train)
         loss = np.mean( (mlp_result - y_train)**2)
